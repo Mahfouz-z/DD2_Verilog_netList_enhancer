@@ -1,4 +1,9 @@
-
+'''
+First: You should initialize a cell using a line from the input .v file
+Second: You should check if the given is a valid cell to include in our cell list using --> cell.check_cell()
+Third: If the cell is valid, add it to our cell list
+Fourth: For Input and output to be ready, you should call cell.find_inputs(), then cell.find_outputs() in order
+'''
 class cell:
     def __init__(self, line):
         f=open(r"verilog parser\osu035.lib", "r")
