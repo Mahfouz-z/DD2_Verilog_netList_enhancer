@@ -1,0 +1,55 @@
+##the document will basically get a code segment and illustrate the functionality and required changes 
+
+code segment1:
+
+{
+    from liberty.parser import parse_liberty
+    library = parse_liberty(open(r"liberty").read())
+    
+}
+
+    this code segment imports the intire liberty file named "liberty" into the var "library" 
+
+
+code segment2:
+{
+    play = library.get_group('head', 'cell_name')
+    assert play is not None
+    pin = play.get_group('pin', 'Y')
+}
+    to find data about a certian cell, the function ".get_group" is used, its parameters are 
+        1. 'head' which basically sshould be 'cell' for all cells we are searching or this project purpose
+        2. 'cell_name', this is the name of the cell we are searching for eg: "AND2X2"
+    the .get_group function parses and stores any text that is composed in the form of:
+        head(cell_name)  {
+        text needed
+        }
+    so it can also be used to parse pins
+        
+code segment3:
+{
+    from liberty.types import select_timing_table
+    time_table=select_timing_table(pin,related_pin,time_type)
+}
+    the select_timing_table function is used to extract all the timing data for a certain pin in a certain cell 
+    that are already extracted, it has 3 parameters:
+        1. pin is of type "groups" and has to be specified as mentioned above
+        2. related_pin is a string for the related_pin for this delay table, is should be one of the 
+        input pins to the cell
+        3. time_type should be the name of the required table. Table name must be one of: 
+                            ['cell_fall', 'cell_rise', 'fall_transition', 'rise_transition']
+
+code segment4:
+{
+    ind1=time_table.get_array("index_1")
+    ind2=time_table.get_array("index_2")
+    print(ind1[0])
+    print(ind1[0][1])
+    print(ind2[0][2])
+}
+    this segment uses .get_array to segment separate components inside the timing table, eg: the values
+    of index_1 of index_2, the produced arrays are 2d arrays and should be refered to as such, to refer to 
+    a single element, you should refer using "ind[0][req_index]", using "ind[0]" will deal with the 
+    entire array. 
+    to deal with the actual values inside the table use "values" instead of "index_1". also dealt with 
+    as a 2d array, but in correct rows/columns format.
