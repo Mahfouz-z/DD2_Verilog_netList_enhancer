@@ -31,6 +31,7 @@ code segment3:
     from liberty.types import select_timing_table
     time_table=select_timing_table(pin,related_pin,time_type)
 }
+    **the function must be imported at the top of the code as shown.**
     the select_timing_table function is used to extract all the timing data for a certain pin in a certain cell 
     that are already extracted, it has 3 parameters:
         1. pin is of type "groups" and has to be specified as mentioned above
