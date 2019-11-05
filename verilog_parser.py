@@ -4,6 +4,9 @@ Second: You should check if the given is a valid cell to include in our cell lis
 Third: If the cell is valid, add it to our cell list
 Fourth: For Input and output to be ready, you should call cell.find_inputs(), then cell.find_outputs() in order
 '''
+
+from liberty.parser import parse_liberty
+
 class cell:
     def __init__(self, line):
         f=open(r"verilog parser\osu035.lib", "r")
@@ -12,7 +15,7 @@ class cell:
         self.line_arr = line.split(" ")
         self.io_counter = 3                               # We will have inputs or outputs starting from the fourth index of the line_arr
         self.type = self.line_arr[0].replace("\n", "")    # replace to remove any extra endl
-      
+
         
     def check_cell(self):
         to_find = "cell (" +self.type + ")"
@@ -61,6 +64,15 @@ class cell:
                          self.io_counter += 1 
                          self.outputs.append((port_root_name, port_con_name))
 
+    def get_inputs(self):
+        return self.inputs
+
+    def set_out_capacitance(self, cap):
+        self.out_capacitance = cap
+
+    def set_delay(self, delay):
+        self.delay = delay
+
 
 
 with open(r'verilog parser\rca4.rtlnopwr.v') as myFile:
@@ -78,5 +90,28 @@ for i in result:
 for c in cells_list:
     c.find_inputs()
     c.find_outputs()
-    print(c.outputs)
 
+
+liberty_file = r"verilog parser\osu035.lib"
+library = parse_liberty(open(liberty_file).read())
+
+for c1 in cells_list:
+    cap = 0
+    counter = 0
+    for c2 in cells_list:
+        for inp in c2.get_inputs():
+            if(c1.outputs[0][1] == inp[1]): #add the capacitance of the output cell
+                cell_info = library.get_group('cell', str(c2.type))
+                pin_info = cell_info.get_group('pin', str(inp[0]))
+                pin_cap = float(pin_info.get_cap('capacitance'))
+                cap += pin_cap
+                counter += 1
+    if(counter == 0): #set cap to -1 to pass an intermediate delay in setting delay step
+        c1.set_out_capacitance(-1)
+    else:
+        c1.set_out_capacitance(cap)
+    
+
+
+for c in cells_list:
+    print(c.out_capacitance)
