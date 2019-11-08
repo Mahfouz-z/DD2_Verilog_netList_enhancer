@@ -6,6 +6,7 @@ Fourth: For Input and output to be ready, you should call cell.find_inputs(), th
 '''
 
 from liberty.parser import parse_liberty
+import math
 
 class cell:
     def __init__(self, line):
@@ -42,7 +43,8 @@ class cell:
                          port_root_name = sp_current_cell_info[i-1][sp_current_cell_info[i-1].find("pin") + 4: sp_current_cell_info[i-1].rfind(")")]
                          port_con_name =  self.line_arr[self.io_counter][self.line_arr[self.io_counter].find(port_root_name) + 2: self.line_arr[self.io_counter].find(")")]
                          self.io_counter += 1 
-                         self.inputs.append((port_root_name, port_con_name))
+                         self.inputs.append([port_root_name, port_con_name])
+        self.inputs = list(self.inputs)
 
                             
     def find_outputs(self):
@@ -62,7 +64,7 @@ class cell:
                          port_root_name = sp_current_cell_info[i-1][sp_current_cell_info[i-1].find("pin") + 4: sp_current_cell_info[i-1].rfind(")")]
                          port_con_name =  self.line_arr[self.io_counter][self.line_arr[self.io_counter].find(port_root_name) + 2: self.line_arr[self.io_counter].find(")")]
                          self.io_counter += 1 
-                         self.outputs.append((port_root_name, port_con_name))
+                         self.outputs.append([port_root_name, port_con_name])
 
     def get_inputs(self):
         return self.inputs
@@ -70,9 +72,20 @@ class cell:
     def set_out_capacitance(self, cap):
         self.out_capacitance = cap
 
-    def set_delay(self, delay):
-        self.delay = delay
+    def set_out_num(self, number_outputs):
+        self.out_num = number_outputs
 
+    def calc_delay(self, library):
+        library.get_group
+        
+
+def create_cell_format(c):
+    cell_form = c.type + " " + c.name +" ( ."
+    for inp in c.inputs:
+        cell_form = cell_form + inp[0] + "(" + inp[1] + "), "
+    for out in c.outputs:
+        cell_form = cell_form + out[0] + "(" + out[1] +") );"
+    return cell_form
 
 
 with open(r'verilog parser\rca4.rtlnopwr.v') as myFile:
@@ -108,10 +121,52 @@ for c1 in cells_list:
                 counter += 1
     if(counter == 0): #set cap to -1 to pass an intermediate delay in setting delay step
         c1.set_out_capacitance(-1)
+        c1.set_out_num(counter)
     else:
         c1.set_out_capacitance(cap)
+        c1.set_out_num(counter)
     
 
+#for c in cells_list:
+#    c.calc_delay(library)
 
-for c in cells_list:
-    print(c.out_capacitance)
+run_mode = int(input("Please input \n1 for sizing up cells with large fanout \n2 for cloning high fan out cells \n3 for adding buffers for high fanouts\n"))
+max_fan_out = int(input("please input max required fanout\n"))
+if(run_mode == 1):
+    print("sizing up cells")
+
+elif(run_mode == 2):
+    print("Cloning cells")
+    for c in cells_list:
+        if (c.out_num > max_fan_out):
+            number_of_clones = math.ceil(c.out_num / max_fan_out)
+            for i in range(number_of_clones-1):
+                cell_form = c.type + " " + c.name +"_" + str(i+1) + " ( ."
+                for inp in c.inputs:
+                    cell_form = cell_form + inp[0] + "(" + inp[1] + "), "
+                for out in c.outputs:
+                    cell_form = cell_form + out[0] + "(" + out[1] + "_" + str(i+1) + ") );"
+                new_clone = cell(cell_form)
+                new_clone.check_cell()
+                new_clone.find_inputs()
+                new_clone.find_outputs()
+                new_clone.set_out_num(max_fan_out)
+                counter = 0
+                for c2 in cells_list:
+                    if(counter < max_fan_out):
+                        for inp in c2.inputs:
+                            if (inp[1] == c.outputs[0][1]):
+                                inp[1] = str(c.outputs[0][1]) + "_" + str(i+1)
+                                counter += 1
+
+                cells_list.append(new_clone)
+    
+    for c in cells_list:
+        print(create_cell_format(c))
+
+
+elif(run_mode == 3):
+    print("Adding buffers")
+
+else:
+    print("Invalid Argument")
