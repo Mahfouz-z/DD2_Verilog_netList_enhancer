@@ -10,7 +10,7 @@ import math
 
 class cell:
     def __init__(self, line):
-        f=open(r"verilog parser\osu035.lib", "r")
+        f=open(r"osu035.lib", "r")
         self.library_data=f.read()
         f.close()        
         self.line_arr = line.split(" ")
@@ -88,7 +88,7 @@ def create_cell_format(c):
     return cell_form
 
 
-with open(r'verilog parser\rca4.rtlnopwr.v') as myFile:
+with open(r'rca4.rtlnopwr.v') as myFile:
   text = myFile.read()
 result = text.split(";")  
 
@@ -105,7 +105,7 @@ for c in cells_list:
     c.find_outputs()
 
 
-liberty_file = r"verilog parser\osu035.lib"
+liberty_file = r"osu035.lib"
 library = parse_liberty(open(liberty_file).read())
 
 for c1 in cells_list:
@@ -132,8 +132,20 @@ for c1 in cells_list:
 
 run_mode = int(input("Please input \n1 for sizing up cells with large fanout \n2 for cloning high fan out cells \n3 for adding buffers for high fanouts\n"))
 max_fan_out = int(input("please input max required fanout\n"))
+
 if(run_mode == 1):
     print("sizing up cells")
+    for c in cells_list:
+        if (c.out_num > max_fan_out):
+            size=c.type.split("X")
+            origin=size[0]
+            size=int(size[1])
+            new_type=origin + "X" + str(size*2)
+            # check for new_type in the .lib file !!
+            c.type=new_type
+            print(c.type)
+
+
 
 elif(run_mode == 2):
     print("Cloning cells")
@@ -160,13 +172,39 @@ elif(run_mode == 2):
                                 counter += 1
 
                 cells_list.append(new_clone)
+
     
     for c in cells_list:
         print(create_cell_format(c))
 
-
 elif(run_mode == 3):
     print("Adding buffers")
+    for c in cells_list:
+        if (c.out_num > max_fan_out):
+            print(str(c.name))
+            number_of_bufs = math.ceil(c.out_num / max_fan_out)
+            for i in range(number_of_bufs):
 
+                #AM NOT SURE IF WE USE THE SAME BUFFER FOR EVERYTHING OR WHAT?
+
+                cell_form = "BUFX2" + " " + "BUFX2" +"__" + str(i+1) + " ( ."
+                cell_form = cell_form + c.inputs[0][0] + "(" + c.outputs[0][1]  + "), "
+                cell_form = cell_form + c.outputs[0][0] + "(" + c.outputs[0][1]+ "_" + str(i) + ") );"
+                new_buf = cell(cell_form)
+                new_buf.check_cell()
+                new_buf.find_inputs()
+                new_buf.find_outputs()
+                new_buf.set_out_num(max_fan_out)   
+                counter = 0
+                for c2 in cells_list:
+                    if(counter < max_fan_out):
+                        for inp in c2.inputs:
+                            if (inp[1] == c.outputs[0][1]):
+                                inp[1] = str(c.outputs[0][1]) + "_" + str(i)
+                                counter += 1
+                cells_list.append(new_buf)
+                print(i)
+    for c in cells_list:
+            print(create_cell_format(c))
 else:
     print("Invalid Argument")
