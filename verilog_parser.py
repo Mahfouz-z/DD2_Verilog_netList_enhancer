@@ -10,7 +10,7 @@ import math
 
 class cell:
     def __init__(self, line):
-        f=open(r"osu035.lib", "r")
+        f=open(r"verilog parser\osu035.lib", "r")
         self.library_data=f.read()
         f.close()        
         self.line_arr = line.split(" ")
@@ -87,8 +87,40 @@ def create_cell_format(c):
         cell_form = cell_form + out[0] + "(" + out[1] +") );"
     return cell_form
 
+def calc_cells_out_number(cells_list):
+    for c1 in cells_list:
+        counter = 0
+        for c2 in cells_list:
+            for inp in c2.get_inputs():
+                if(c1.outputs[0][1] == inp[1]): 
+                    counter += 1
+        if(counter == 0):
+            c1.set_out_num(counter)
+        else:
+            c1.set_out_num(counter)
 
-with open(r'rca4.rtlnopwr.v') as myFile:
+
+def calc_cells_out_cap(cells_list):
+    for c1 in cells_list:
+        cap = 0
+        counter = 0
+        for c2 in cells_list:
+            for inp in c2.get_inputs():
+                if(c1.outputs[0][1] == inp[1]): #add the capacitance of the output cell
+                    cell_info = library.get_group('cell', str(c2.type))
+                    pin_info = cell_info.get_group('pin', str(inp[0]))
+                    pin_cap = float(pin_info.get_cap('capacitance'))
+                    cap += pin_cap
+                    counter += 1
+        if(counter == 0): #set cap to -1 to pass an intermediate delay in setting delay step
+            c1.set_out_capacitance(-1)
+            c1.set_out_num(counter)
+        else:
+            c1.set_out_capacitance(cap)
+            c1.set_out_num(counter)
+
+
+with open(r'verilog parser\rca4.rtlnopwr.v') as myFile:
   text = myFile.read()
 result = text.split(";")  
 
@@ -105,26 +137,10 @@ for c in cells_list:
     c.find_outputs()
 
 
-liberty_file = r"osu035.lib"
+liberty_file = r"verilog parser\osu035.lib"
 library = parse_liberty(open(liberty_file).read())
 
-for c1 in cells_list:
-    cap = 0
-    counter = 0
-    for c2 in cells_list:
-        for inp in c2.get_inputs():
-            if(c1.outputs[0][1] == inp[1]): #add the capacitance of the output cell
-                cell_info = library.get_group('cell', str(c2.type))
-                pin_info = cell_info.get_group('pin', str(inp[0]))
-                pin_cap = float(pin_info.get_cap('capacitance'))
-                cap += pin_cap
-                counter += 1
-    if(counter == 0): #set cap to -1 to pass an intermediate delay in setting delay step
-        c1.set_out_capacitance(-1)
-        c1.set_out_num(counter)
-    else:
-        c1.set_out_capacitance(cap)
-        c1.set_out_num(counter)
+calc_cells_out_cap(cells_list)
     
 
 #for c in cells_list:
@@ -147,7 +163,7 @@ if(run_mode == 1):
             if(checks == 0):
                 #if size*2 of cell doesn't exist, try an even bigger size
                 new_type=origin + "X" + str(size*4)
-                print(new_type)
+                #print(new_type)
                 checks = len(library.get_groups("cell", new_type))
             if(checks != 0):
                 c.type=new_type
@@ -160,78 +176,94 @@ if(run_mode == 1):
 
 elif(run_mode == 2):
     print("Cloning cells")
-    for c in cells_list:
-        if (c.out_num > max_fan_out):
-            number_of_clones = math.ceil(c.out_num / max_fan_out)
-            for i in range(number_of_clones-1):
-                cell_form = c.type + " " + c.name +"_" + str(i+1) + " ( ."
-                for inp in c.inputs:
-                    cell_form = cell_form + inp[0] + "(" + inp[1] + "), ."
-                for out in c.outputs:
-                    cell_form = cell_form + out[0] + "(" + out[1] + "_" + str(i+1) + ") );"
-                new_clone = cell(cell_form)
-                new_clone.check_cell()
-                new_clone.find_inputs()
-                new_clone.find_outputs()
-                new_clone.set_out_num(max_fan_out)
-                counter = 0
-                for c2 in cells_list:
-                    if(counter < max_fan_out):
-                        for inp in c2.inputs:
-                            if (inp[1] == c.outputs[0][1]):
-                                inp[1] = str(c.outputs[0][1]) + "_" + str(i+1)
-                                counter += 1
+    counter_for_while = 1
+    while True:
+        length_before_change = len(cells_list)
+        for c in cells_list:
+            if (c.out_num > max_fan_out):
+                number_of_clones = math.ceil(c.out_num / max_fan_out)
+                for i in range(number_of_clones-1):
+                    cell_form = c.type + " " + c.name +"_" +  str(counter_for_while) +  str(i+1) + " ( ."
+                    for inp in c.inputs:
+                        cell_form = cell_form + inp[0] + "(" + inp[1] + "), ."
+                    for out in c.outputs:
+                        cell_form = cell_form + out[0] + "(" + out[1] + "_" + str(counter_for_while) + str(i+1) + ") );"
+                    new_clone = cell(cell_form)
+                    new_clone.check_cell()
+                    new_clone.find_inputs()
+                    new_clone.find_outputs()
+                    new_clone.set_out_num(max_fan_out)
+                    counter = 0
+                    for c2 in cells_list:
+                        if(counter < max_fan_out):
+                            for inp in c2.inputs:
+                                if (inp[1] == c.outputs[0][1]):
+                                    inp[1] = str(c.outputs[0][1]) + "_" + str(counter_for_while)+ str(i+1)
+                                    counter += 1
 
-                cells_list.append(new_clone)
-
+                    cells_list.append(new_clone)
+        counter_for_while += 1
+        calc_cells_out_number(cells_list)
+        length_after_change = len(cells_list)
+        if(length_before_change == length_after_change):
+            break
     
     for c in cells_list:
         print(create_cell_format(c))
 
 elif(run_mode == 3):
     print("Adding buffers")
-    counterx = 1
-    for c in cells_list:
-        if (c.out_num > max_fan_out):
-            number_of_bufs = math.ceil(c.out_num / max_fan_out)
-            size=c.type.split("X")
-            size=int(size[1])
-            buf_size = size / number_of_bufs  #getting an approx value for buffer size 
-            #validating the buffer size from the library 
-            if (0 < buf_size ):
-                temp_buf_size = 2
-                if (len(library.get_groups("cell", "BUFX" + str(temp_buf_size))) != 0):
-                    temp_size = temp_buf_size
-            if (2 < buf_size ):
-                temp_buf_size = 4
-                if (len(library.get_groups("cell", "BUFX" + str(temp_buf_size))) != 0):
-                    temp_size = temp_buf_size
-            if (4 < buf_size ):
-                temp_buf_size = 8
-                if (len(library.get_groups("cell", "BUFX" + str(temp_buf_size))) != 0):
-                    temp_size = temp_buf_size
-            buf_size = temp_size
-            buf_form= "BUFX"+ str(buf_size)
-            print(buf_form)
-            for i in range(number_of_bufs):
-                cell_form = buf_form + " " + buf_form +"__" + str(counterx) + " ( ."
-                cell_form = cell_form + c.inputs[0][0] + "(" + c.outputs[0][1]  + "), ."
-                cell_form = cell_form + c.outputs[0][0] + "(" + c.outputs[0][1]+ "_" + str(i) + ") );"
-                new_buf = cell(cell_form)
-                new_buf.check_cell()
-                new_buf.find_inputs()
-                new_buf.find_outputs()
-                new_buf.set_out_num(max_fan_out)   
-                counter = 0
-                for c2 in cells_list:
-                    if(counter < max_fan_out):
-                        for inp in c2.inputs:
-                            if (inp[1] == c.outputs[0][1]):
-                                inp[1] = str(c.outputs[0][1]) + "_" + str(i)
-                                counter += 1
-                counterx += 1
-                cells_list.append(new_buf)
+    counter_for_while = 1
+    while True:
+        length_before_change = len(cells_list)
+        counterx = 1
+        for c in cells_list:
+            if (c.out_num > max_fan_out):
+                number_of_bufs = math.ceil(c.out_num / max_fan_out)
+                size=c.type.split("X")
+                size=int(size[1])
+                buf_size = size / number_of_bufs  #getting an approx value for buffer size 
+                #validating the buffer size from the library 
+                if (0 < buf_size ):
+                    temp_buf_size = 2
+                    if (len(library.get_groups("cell", "BUFX" + str(temp_buf_size))) != 0):
+                        temp_size = temp_buf_size
+                if (2 < buf_size ):
+                    temp_buf_size = 4
+                    if (len(library.get_groups("cell", "BUFX" + str(temp_buf_size))) != 0):
+                        temp_size = temp_buf_size
+                if (4 < buf_size ):
+                    temp_buf_size = 8
+                    if (len(library.get_groups("cell", "BUFX" + str(temp_buf_size))) != 0):
+                        temp_size = temp_buf_size
+                buf_size = temp_size
+                buf_form= "BUFX"+ str(buf_size)
+                #print(buf_form)
+                for i in range(number_of_bufs):
+                    cell_form = buf_form + " " + buf_form +"__" + str(counter_for_while) + str(counterx) +  " ( ."
+                    cell_form = cell_form + c.inputs[0][0] + "(" + c.outputs[0][1]  + "), ."
+                    cell_form = cell_form + c.outputs[0][0] + "(" + c.outputs[0][1]+ "_" + str(counter_for_while) + str(i) +  ") );"
+                    new_buf = cell(cell_form)
+                    new_buf.check_cell()
+                    new_buf.find_inputs()
+                    new_buf.find_outputs()
+                    new_buf.set_out_num(max_fan_out)   
+                    counter = 0
+                    for c2 in cells_list:
+                        if(counter < max_fan_out):
+                            for inp in c2.inputs:
+                                if (inp[1] == c.outputs[0][1]):
+                                    inp[1] = str(c.outputs[0][1]) + "_" +str(counter_for_while) + str(i)  
+                                    counter += 1
+                    counterx += 1
+                    cells_list.append(new_buf)
+        counter_for_while += 1         
+        length_after_change = len(cells_list)
+        calc_cells_out_number(cells_list)
+        if(length_before_change == length_after_change): 
+            break            
     for c in cells_list:
             print(create_cell_format(c))
+                
 else:
     print("Invalid Argument")
