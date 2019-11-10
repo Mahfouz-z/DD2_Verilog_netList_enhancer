@@ -82,7 +82,7 @@ class cell:
 def create_cell_format(c):
     cell_form = c.type + " " + c.name +" ( ."
     for inp in c.inputs:
-        cell_form = cell_form + inp[0] + "(" + inp[1] + "), "
+        cell_form = cell_form + inp[0] + "(" + inp[1] + "), ."
     for out in c.outputs:
         cell_form = cell_form + out[0] + "(" + out[1] +") );"
     return cell_form
@@ -135,6 +135,7 @@ max_fan_out = int(input("please input max required fanout\n"))
 
 if(run_mode == 1):
     print("sizing up cells")
+    counter = 0
     for c in cells_list:
         if (c.out_num > max_fan_out):
             size=c.type.split("X")
@@ -142,8 +143,18 @@ if(run_mode == 1):
             size=int(size[1])
             new_type=origin + "X" + str(size*2)
             # check for new_type in the .lib file !!
-            c.type=new_type
-            print(c.type)
+            checks = len(library.get_groups("cell", new_type))
+            if(checks == 0):
+                #if size*2 of cell doesn't exist, try an even bigger size
+                new_type=origin + "X" + str(size*4)
+                print(new_type)
+                checks = len(library.get_groups("cell", new_type))
+            if(checks != 0):
+                c.type=new_type
+                c.name=new_type+ "__" + str(counter)
+                counter+= 1
+    for c in cells_list:
+        print(create_cell_format(c))
 
 
 
@@ -155,7 +166,7 @@ elif(run_mode == 2):
             for i in range(number_of_clones-1):
                 cell_form = c.type + " " + c.name +"_" + str(i+1) + " ( ."
                 for inp in c.inputs:
-                    cell_form = cell_form + inp[0] + "(" + inp[1] + "), "
+                    cell_form = cell_form + inp[0] + "(" + inp[1] + "), ."
                 for out in c.outputs:
                     cell_form = cell_form + out[0] + "(" + out[1] + "_" + str(i+1) + ") );"
                 new_clone = cell(cell_form)
@@ -179,16 +190,32 @@ elif(run_mode == 2):
 
 elif(run_mode == 3):
     print("Adding buffers")
+    counterx = 1
     for c in cells_list:
         if (c.out_num > max_fan_out):
-            print(str(c.name))
             number_of_bufs = math.ceil(c.out_num / max_fan_out)
+            size=c.type.split("X")
+            size=int(size[1])
+            buf_size = size / number_of_bufs  #getting an approx value for buffer size 
+            #validating the buffer size from the library 
+            if (0 < buf_size ):
+                temp_buf_size = 2
+                if (len(library.get_groups("cell", "BUFX" + str(temp_buf_size))) != 0):
+                    temp_size = temp_buf_size
+            if (2 < buf_size ):
+                temp_buf_size = 4
+                if (len(library.get_groups("cell", "BUFX" + str(temp_buf_size))) != 0):
+                    temp_size = temp_buf_size
+            if (4 < buf_size ):
+                temp_buf_size = 8
+                if (len(library.get_groups("cell", "BUFX" + str(temp_buf_size))) != 0):
+                    temp_size = temp_buf_size
+            buf_size = temp_size
+            buf_form= "BUFX"+ str(buf_size)
+            print(buf_form)
             for i in range(number_of_bufs):
-
-                #AM NOT SURE IF WE USE THE SAME BUFFER FOR EVERYTHING OR WHAT?
-
-                cell_form = "BUFX2" + " " + "BUFX2" +"__" + str(i+1) + " ( ."
-                cell_form = cell_form + c.inputs[0][0] + "(" + c.outputs[0][1]  + "), "
+                cell_form = buf_form + " " + buf_form +"__" + str(counterx) + " ( ."
+                cell_form = cell_form + c.inputs[0][0] + "(" + c.outputs[0][1]  + "), ."
                 cell_form = cell_form + c.outputs[0][0] + "(" + c.outputs[0][1]+ "_" + str(i) + ") );"
                 new_buf = cell(cell_form)
                 new_buf.check_cell()
@@ -202,8 +229,8 @@ elif(run_mode == 3):
                             if (inp[1] == c.outputs[0][1]):
                                 inp[1] = str(c.outputs[0][1]) + "_" + str(i)
                                 counter += 1
+                counterx += 1
                 cells_list.append(new_buf)
-                print(i)
     for c in cells_list:
             print(create_cell_format(c))
 else:
