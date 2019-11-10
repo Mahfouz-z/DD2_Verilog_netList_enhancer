@@ -7,77 +7,9 @@ Fourth: For Input and output to be ready, you should call cell.find_inputs(), th
 
 from liberty.parser import parse_liberty
 import math
-
-class cell:
-    def __init__(self, line):
-        f=open(r"verilog parser\osu035.lib", "r")
-        self.library_data=f.read()
-        f.close()        
-        self.line_arr = line.split(" ")
-        self.io_counter = 3                               # We will have inputs or outputs starting from the fourth index of the line_arr
-        self.type = self.line_arr[0].replace("\n", "")    # replace to remove any extra endl
-
-        
-    def check_cell(self):
-        to_find = "cell (" +self.type + ")"
-        if(self.library_data.find(to_find) == -1): 
-            return False
-        else:
-            self.name = self.line_arr[1]
-            return True   
-
-    def find_inputs(self):
-        to_find = "cell (" +self.type + ")"
-        starting_idex = self.library_data.find(to_find) 
-        if(starting_idex != -1):
-            current_cell_info = self.library_data.split(to_find)
-            current_cell_info = current_cell_info[1]
-            if(current_cell_info.find("cell (") != -1):
-                current_cell_info = current_cell_info.split("cell (")
-                current_cell_info = current_cell_info[0]
-                sp_current_cell_info = current_cell_info.split("direction")
-                self.inputs = list()
-                for i in range(len(sp_current_cell_info)):
-                    if(sp_current_cell_info[i].find("input") != -1):
-                         #find the input pin name in the liberty file, then go search in the verilog line
-                         port_root_name = sp_current_cell_info[i-1][sp_current_cell_info[i-1].find("pin") + 4: sp_current_cell_info[i-1].rfind(")")]
-                         port_con_name =  self.line_arr[self.io_counter][self.line_arr[self.io_counter].find(port_root_name) + 2: self.line_arr[self.io_counter].find(")")]
-                         self.io_counter += 1 
-                         self.inputs.append([port_root_name, port_con_name])
-        self.inputs = list(self.inputs)
-
-                            
-    def find_outputs(self):
-        to_find = "cell (" +self.type + ")"
-        starting_idex = self.library_data.find(to_find) 
-        if(starting_idex != -1):
-            current_cell_info = self.library_data.split(to_find)
-            current_cell_info = current_cell_info[1]
-            if(current_cell_info.find("cell (") != -1):
-                current_cell_info = current_cell_info.split("cell (")
-                current_cell_info = current_cell_info[0]
-                sp_current_cell_info = current_cell_info.split("direction")
-                self.outputs = list()
-                for i in range(len(sp_current_cell_info)):
-                    if(sp_current_cell_info[i].find("output") != -1):
-                         #find the input pin name in the liberty file, then go search in the verilog line
-                         port_root_name = sp_current_cell_info[i-1][sp_current_cell_info[i-1].find("pin") + 4: sp_current_cell_info[i-1].rfind(")")]
-                         port_con_name =  self.line_arr[self.io_counter][self.line_arr[self.io_counter].find(port_root_name) + 2: self.line_arr[self.io_counter].find(")")]
-                         self.io_counter += 1 
-                         self.outputs.append([port_root_name, port_con_name])
-
-    def get_inputs(self):
-        return self.inputs
-
-    def set_out_capacitance(self, cap):
-        self.out_capacitance = cap
-
-    def set_out_num(self, number_outputs):
-        self.out_num = number_outputs
-
-    def calc_delay(self, library):
-        library.get_group
-        
+from cell_class import cell
+from liberty.types import select_timing_table
+import numpy as np    
 
 def create_cell_format(c):
     cell_form = c.type + " " + c.name +" ( ."
@@ -120,6 +52,54 @@ def calc_cells_out_cap(cells_list):
             c1.set_out_num(counter)
 
 
+def calc_cells_delay(cells_list, library):
+    total_delay = 0
+    for c in cells_list:
+        cell_info = library.get_group("cell", c.type)
+        pin_info = cell_info.get_group('pin', c.outputs[0][0])
+        max_delay = -1e9
+        time_fall = -1e9
+        time_rise = -1e9
+        if(c.out_capacitance != -1):
+            for inp in c.inputs:
+                if(str(pin_info).find(inp[0]) != -1):
+                    search_for_table_type =  str(pin_info)[str(pin_info).find(inp[0], str(pin_info).find("related_pin")) :]
+                    search_for_table_type = search_for_table_type[:search_for_table_type.find("related_pin")]
+                    if(search_for_table_type.find("cell_fall") != -1):
+                        time_table_fall = select_timing_table(pin_info, inp[0], 'cell_fall')
+                        cap_values = time_table_fall.get_array('index_1')[0]
+                        time_values_fall = time_table_fall.get_array('values')[:,2]
+                        time_fall = np.interp(c.out_capacitance, cap_values, time_values_fall) 
+                    
+                    if(search_for_table_type.find("cell_fall") != -1):
+                        time_table_rise = select_timing_table(pin_info, inp[0], 'cell_rise')
+                        cap_values = time_table_rise.get_array('index_1')[0]
+                        time_values_rise = time_table_rise.get_array('values')[:,2]
+                        time_rise = np.interp(c.out_capacitance, cap_values, time_values_rise)
+
+                    max_delay = max(max_delay, time_rise, time_fall)
+        else:
+            for inp in c.inputs:
+                if(str(pin_info).find(inp[0]) != -1):
+                    search_for_table_type =  str(pin_info)[str(pin_info).find(inp[0], str(pin_info).find("related_pin")) :]
+                    search_for_table_type = search_for_table_type[:search_for_table_type.find("related_pin")]
+                
+                    if(search_for_table_type.find("cell_rise") != -1):
+                        time_table_rise = select_timing_table(pin_info, inp[0], 'cell_rise')
+                        time_rise = time_table_rise.get_array('values')[2][2]
+                    if(search_for_table_type.find("cell_fall") != -1):
+                        time_table_fall = select_timing_table(pin_info, inp[0], 'cell_fall')
+                        time_fall = time_table_fall.get_array('values')[2][2]
+                    
+                    max_delay = max(time_fall, time_rise, max_delay)
+
+        total_delay += max_delay
+    
+    return total_delay
+
+
+    
+
 with open(r'verilog parser\rca4.rtlnopwr.v') as myFile:
   text = myFile.read()
 result = text.split(";")  
@@ -133,18 +113,18 @@ for i in result:
     
 
 for c in cells_list:
-    c.find_inputs()
-    c.find_outputs()
+    c.find_io()
+
+
+
 
 
 liberty_file = r"verilog parser\osu035.lib"
 library = parse_liberty(open(liberty_file).read())
 
-calc_cells_out_cap(cells_list)
-    
 
-#for c in cells_list:
-#    c.calc_delay(library)
+calc_cells_out_cap(cells_list)
+delay_before_processing = calc_cells_delay(cells_list, library) 
 
 run_mode = int(input("Please input \n1 for sizing up cells with large fanout \n2 for cloning high fan out cells \n3 for adding buffers for high fanouts\n"))
 max_fan_out = int(input("please input max required fanout\n"))
@@ -172,8 +152,6 @@ if(run_mode == 1):
     for c in cells_list:
         print(create_cell_format(c))
 
-
-
 elif(run_mode == 2):
     print("Cloning cells")
     counter_for_while = 1
@@ -190,8 +168,7 @@ elif(run_mode == 2):
                         cell_form = cell_form + out[0] + "(" + out[1] + "_" + str(counter_for_while) + str(i+1) + ") );"
                     new_clone = cell(cell_form)
                     new_clone.check_cell()
-                    new_clone.find_inputs()
-                    new_clone.find_outputs()
+                    new_clone.find_io()
                     new_clone.set_out_num(max_fan_out)
                     counter = 0
                     for c2 in cells_list:
@@ -245,8 +222,7 @@ elif(run_mode == 3):
                     cell_form = cell_form + c.outputs[0][0] + "(" + c.outputs[0][1]+ "_" + str(counter_for_while) + str(i) +  ") );"
                     new_buf = cell(cell_form)
                     new_buf.check_cell()
-                    new_buf.find_inputs()
-                    new_buf.find_outputs()
+                    new_buf.find_io()
                     new_buf.set_out_num(max_fan_out)   
                     counter = 0
                     for c2 in cells_list:
@@ -267,3 +243,8 @@ elif(run_mode == 3):
                 
 else:
     print("Invalid Argument")
+
+calc_cells_out_cap(cells_list)
+print ("Total cells delay before Processing: ", delay_before_processing, " ns")   
+print ("Total cells delay After Processing: ", calc_cells_delay(cells_list, library), " ns")   
+
