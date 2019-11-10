@@ -112,7 +112,7 @@ def calc_cell_freq(cells_list):
 
 f = open("output.v","w+")
 
-with open(r'verilog parser\rca4.rtlnopwr.v') as myFile:
+with open(r'test_verilog\cpu.rtlnopwr.v') as myFile:
   text = myFile.read()
 result = text.split(";")  
 
@@ -131,7 +131,7 @@ for c in cells_list:
 
 
 
-liberty_file = r"verilog parser\osu035.lib"
+liberty_file = r"osu035.lib"
 library = parse_liberty(open(liberty_file).read())
 
 
@@ -151,19 +151,20 @@ if(run_mode == 1):
         if (c.out_num > max_fan_out):
             size=c.type.split("X")
             origin=size[0]
-            size=int(size[1])
-            new_type=origin + "X" + str(size*2)
-            # check for new_type in the .lib file !!
-            checks = len(library.get_groups("cell", new_type))
-            if(checks == 0):
-                #if size*2 of cell doesn't exist, try an even bigger size
-                new_type=origin + "X" + str(size*4)
-                #print(new_type)
+            if(len(size)>=2):
+                size=int(size[1])
+                new_type=origin + "X" + str(size*2)
+                # check for new_type in the .lib file !!
                 checks = len(library.get_groups("cell", new_type))
-            if(checks != 0):
-                c.type=new_type
-                c.name=new_type+ "__" + str(counter)
-                counter+= 1
+                if(checks == 0):
+                    #if size*2 of cell doesn't exist, try an even bigger size
+                    new_type=origin + "X" + str(size*4)
+                    #print(new_type)
+                    checks = len(library.get_groups("cell", new_type))
+                if(checks != 0):
+                    c.type=new_type
+                    c.name=new_type+ "__" + str(counter)
+                    counter+= 1
 
 
 elif(run_mode == 2):
@@ -210,7 +211,9 @@ elif(run_mode == 3):
             if (c.out_num > max_fan_out):
                 number_of_bufs = math.ceil(c.out_num / max_fan_out)
                 size=c.type.split("X")
-                size=int(size[1])
+                if(len(size)>=2):
+                    size=int(size[1])
+                else: size=1
                 buf_size = size / number_of_bufs  #getting an approx value for buffer size 
                 #validating the buffer size from the library 
                 if (0 < buf_size ):
