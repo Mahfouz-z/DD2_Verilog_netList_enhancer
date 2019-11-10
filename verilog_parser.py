@@ -110,6 +110,8 @@ def calc_cell_freq(cells_list):
     return cells_freq_list
     
 
+f = open("output.v","w+")
+
 with open(r'verilog parser\rca4.rtlnopwr.v') as myFile:
   text = myFile.read()
 result = text.split(";")  
@@ -120,12 +122,12 @@ for i in result:
     cell_i = cell(i)
     if(cell_i.check_cell()):
         cells_list.append(cell_i)
+    elif(i.find("endmodule") == -1):
+        f.write(i)
     
 
 for c in cells_list:
     c.find_io()
-
-
 
 
 
@@ -162,8 +164,7 @@ if(run_mode == 1):
                 c.type=new_type
                 c.name=new_type+ "__" + str(counter)
                 counter+= 1
-    for c in cells_list:
-        print(create_cell_format(c))
+
 
 elif(run_mode == 2):
     print("Cloning cells")
@@ -198,8 +199,6 @@ elif(run_mode == 2):
         if(length_before_change == length_after_change):
             break
     
-    for c in cells_list:
-        print(create_cell_format(c))
 
 elif(run_mode == 3):
     print("Adding buffers")
@@ -251,8 +250,7 @@ elif(run_mode == 3):
         calc_cells_out_number(cells_list)
         if(length_before_change == length_after_change): 
             break            
-    for c in cells_list:
-            print(create_cell_format(c))
+
                 
 else:
     print("Invalid Argument")
@@ -267,6 +265,12 @@ for c in cells_freq_before_process:
 print("Cells frequency after Processing: ")
 for c in cells_freq_after_process:
     print(c[0], " Freq --> ", c[1])
+
+for c in cells_list:
+    save = create_cell_format(c) + "\n"
+    f.write(save)
+f.write("endmodule")
+f.close()
 
 print ("Total cells delay before Processing: ", delay_before_processing, " ns")   
 print ("Total cells delay After Processing: ", calc_cells_delay(cells_list, library), " ns")   
