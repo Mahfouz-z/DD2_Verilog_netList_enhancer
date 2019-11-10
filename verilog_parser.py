@@ -97,7 +97,17 @@ def calc_cells_delay(cells_list, library):
     
     return total_delay
 
-
+def calc_cell_freq(cells_list):
+    cells_freq_list = list()
+    for c1 in cells_list:
+        flag = True
+        for c2 in cells_freq_list:
+            if(c1.type == c2[0]):
+                flag = False
+                c2[1] += 1
+        if(flag):
+            cells_freq_list.append([c1.type, 1])
+    return cells_freq_list
     
 
 with open(r'verilog parser\rca4.rtlnopwr.v') as myFile:
@@ -126,9 +136,12 @@ library = parse_liberty(open(liberty_file).read())
 calc_cells_out_cap(cells_list)
 delay_before_processing = calc_cells_delay(cells_list, library) 
 
+
+cells_freq_before_process = calc_cell_freq(cells_list)
+
+
 run_mode = int(input("Please input \n1 for sizing up cells with large fanout \n2 for cloning high fan out cells \n3 for adding buffers for high fanouts\n"))
 max_fan_out = int(input("please input max required fanout\n"))
-
 if(run_mode == 1):
     print("sizing up cells")
     counter = 0
@@ -245,6 +258,16 @@ else:
     print("Invalid Argument")
 
 calc_cells_out_cap(cells_list)
+cells_freq_after_process = calc_cell_freq(cells_list)
+
+print("Cells frequency before Processing: ")
+for c in cells_freq_before_process:
+    print(c[0], " Freq --> ", c[1])
+
+print("Cells frequency after Processing: ")
+for c in cells_freq_after_process:
+    print(c[0], " Freq --> ", c[1])
+
 print ("Total cells delay before Processing: ", delay_before_processing, " ns")   
 print ("Total cells delay After Processing: ", calc_cells_delay(cells_list, library), " ns")   
 
