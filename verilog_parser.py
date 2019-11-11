@@ -11,7 +11,9 @@ from cell_class import cell
 from liberty.types import select_timing_table
 import numpy as np    
 
-def create_cell_format(c):
+#This Function Is responsible for formating an instance of the cell class to a string similar to Verilog
+#netlist strings
+def create_cell_format(c):      
     cell_form = c.type + " " + c.name +" ( ."
     for inp in c.inputs:
         cell_form = cell_form + inp[0] + "(" + inp[1] + "), ."
@@ -19,6 +21,9 @@ def create_cell_format(c):
         cell_form = cell_form + out[0] + "(" + out[1] +") );"
     return cell_form
 
+
+#This Function takes a list of cells and calculate the number of outputs for each cell and add it as an attribute
+#of the cell in the class
 def calc_cells_out_number(cells_list):
     for c1 in cells_list:
         counter = 0
@@ -31,7 +36,8 @@ def calc_cells_out_number(cells_list):
         else:
             c1.set_out_num(counter)
 
-
+#This Function takes a list of cells and calculate the Capacitance at the output of each cell and save it as an
+#attribute of the cell in the class
 def calc_cells_out_cap(cells_list):
     for c1 in cells_list:
         cap = 0
@@ -51,7 +57,8 @@ def calc_cells_out_cap(cells_list):
             c1.set_out_capacitance(cap)
             c1.set_out_num(counter)
 
-
+#This Function calculates The delay of each cell in the given cells list by fetching the corresponding delay value
+#to the output capacitance; therefore, it should be called after calculating the capacitance for each cell
 def calc_cells_delay(cells_list, library):
     total_delay = 0
     for c in cells_list:
@@ -97,6 +104,8 @@ def calc_cells_delay(cells_list, library):
     
     return total_delay
 
+#This Function Takes a list of cells and calculates the frequencey of each type and returns A frequency array 
+#that includes the frequency of each type of cells
 def calc_cell_freq(cells_list):
     cells_freq_list = list()
     for c1 in cells_list:
@@ -110,41 +119,45 @@ def calc_cell_freq(cells_list):
     return cells_freq_list
     
 
-f = open("output.v","w+")
 
-with open(r'test_verilog\cpu.rtlnopwr.v') as myFile:
+f = open("output.v","w+")   #Opens the output .v file for writing
+
+with open(r'verilog parser\rca4.rtlnopwr.v') as myFile: #opens the input .v file that our algorithms would work on
   text = myFile.read()
 result = text.split(";")  
 
-cells_list = list()
+cells_list = list()     #Creating a list to hold the cells
 
-for i in result:
+
+for i in result:       #looping on each line in the result array to extract cells info and check if it's a valid cell line
     cell_i = cell(i)
     if(cell_i.check_cell()):
         cells_list.append(cell_i)
     elif(i.find("endmodule") == -1):
-        f.write(i)
+        f.write(i)     #Writing non-cell lines to the output to preserve file format
     
 
-for c in cells_list:
+for c in cells_list:    #Finding the inputs and outputs of each cell and adding them as internal attribute of each cell
     c.find_io()
 
 
 
-liberty_file = r"osu035.lib"
+liberty_file = r"verilog parser\osu035.lib"         #Opening The liberty file for information extraction
 library = parse_liberty(open(liberty_file).read())
 
 
-calc_cells_out_cap(cells_list)
-delay_before_processing = calc_cells_delay(cells_list, library) 
+#Collecting info about the cells in the give file before processing them for comparison
+calc_cells_out_cap(cells_list)                                      #calculate output cap of each cell
+delay_before_processing = calc_cells_delay(cells_list, library)     #calculate total cells delay 
+cells_freq_before_process = calc_cell_freq(cells_list)              #calculate the frequency of each cell
 
 
-cells_freq_before_process = calc_cell_freq(cells_list)
-
-
+#Prompting the user For the required algorithm to implement, and the ceil of the fanout
 run_mode = int(input("Please input \n1 for sizing up cells with large fanout \n2 for cloning high fan out cells \n3 for adding buffers for high fanouts\n"))
 max_fan_out = int(input("please input max required fanout\n"))
-if(run_mode == 1):
+if(run_mode == 1):      #Run Mode 1 --> Sizing Up cells
+    #This mode searches for the cells with fanout more than the ceil of fanout that was taken as input above
+    #and upsizes these cells to double its size if this size is available in the library.
     print("sizing up cells")
     counter = 0
     for c in cells_list:
