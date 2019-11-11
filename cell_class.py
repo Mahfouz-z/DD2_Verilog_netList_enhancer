@@ -55,4 +55,16 @@ class cell:
                          port_con_name =  self.line_arr[self.io_counter][self.line_arr[self.io_counter].find(port_root_name) + 2: self.line_arr[self.io_counter].find(")")]
                          self.io_counter += 1 
                          self.outputs.append([port_root_name, port_con_name])
+
+    def get_inputs(self):
+        return self.inputs
+
+    def set_out_capacitance(self, cap):
+        self.out_capacitance = cap
+
+    def set_out_num(self, number_outputs):
+        self.out_num = number_outputs
+
+    def calc_delay(self, library):
+        library.get_group 
         
