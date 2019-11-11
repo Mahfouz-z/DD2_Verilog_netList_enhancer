@@ -1,4 +1,0 @@
-1. fixed input transition (intermediate transition)
-2.we are dealing with single output cells
-3.the delays are calculated for each cell regarding the first input as the related pin
-4.??
