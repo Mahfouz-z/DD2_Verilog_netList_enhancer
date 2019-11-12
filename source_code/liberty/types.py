@@ -51,6 +51,15 @@ class Group:
                      )
                 ]
 
+##
+    def get_cap(self, argument: Optional[str] = 'rise_capacitance')-> str:
+        data =  str(self)
+        data = data.split(argument)
+        data = data[1]
+        data = data[data.find(" ") + 1:data.find(";")]
+       
+        return data
+##
     def get_group(self, type_name: str, argument: Optional[str] = None):
         """
         Get exactly one group of type `type_name`.

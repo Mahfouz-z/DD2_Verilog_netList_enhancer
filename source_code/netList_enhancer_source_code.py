@@ -122,7 +122,7 @@ def calc_cell_freq(cells_list):
 
 f = open("output.v","w+")   #Opens the output .v file for writing
 
-with open(r'verilog parser\rca4.rtlnopwr.v') as myFile: #opens the input .v file that our algorithms would work on
+with open(r'Examples\test_verilog\rca4.rtlnopwr.v') as myFile: #opens the input .v file that our algorithms would work on
   text = myFile.read()
 result = text.split(";")  
 
@@ -142,7 +142,7 @@ for c in cells_list:    #Finding the inputs and outputs of each cell and adding 
 
 
 
-liberty_file = r"verilog parser\osu035.lib"         #Opening The liberty file for information extraction
+liberty_file = r"source_code\osu035.lib"         #Opening The liberty file for information extraction
 library = parse_liberty(open(liberty_file).read())
 
 

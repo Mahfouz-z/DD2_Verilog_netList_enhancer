@@ -1,6 +1,5 @@
-from liberty.types import select_timing_table
 
-
+from "source_code\liberty-parser\liberty\parser.py" import select_timing_table
 from liberty.parser import parse_liberty
 library = parse_liberty(open(r"test_data\gscl45nm.lib").read())
 play = library.get_group('cell', 'AND2X2')

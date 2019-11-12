@@ -8,7 +8,7 @@ class cell:
     # The init function opens the liberty file for reading, initializes variables needed later on, and
     # Assigns the type attribute of the cell
     def __init__(self, line):
-        f=open(r"verilog parser\osu035.lib", "r")
+        f=open(r"source_code\osu035.lib", "r")
         self.library_data=f.read()
         f.close()        
         self.line_arr = line.split(" ")
