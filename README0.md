@@ -1,3 +1,7 @@
+# DD2_Verilog_netList_enhancer
+Acknowledgments:
+    1. This Project was done for Digital Design 2 course under supervision of Dr Mohamed Shalan
+    2. This Project was done under the umberlla of the csce department at The American University in Cairo
 Assumptions:
     1. fixed input transition (intermediate transition).
     2. we are dealing with single output cells.
