@@ -24,4 +24,9 @@ Limitations: <br/>
         delays and signals, so added cells or buffers my increase the accumilative cell delay <br/>
     - the program can't handle verilog netlists that contain cells with more than one output, it handles them as <br/>
         single-output cells and neglects all additional outputs <br/>
-        
+Dependencies:
+    - the liberty-parser library requires the installment of some additional python libraries (can be done through terminal):
+        ='lark-parser'
+        ='numpy'
+        ='sympy'
+    
