@@ -1,0 +1,14 @@
+sizing up cells
+Cells frequency before Processing:
+OR2X1  Freq -->  1
+OR2X2  Freq -->  1
+NAND2X1  Freq -->  1
+NOR2X1  Freq -->  1
+AND2X2  Freq -->  2
+Cells frequency after Processing:
+OR2X2  Freq -->  2
+NAND2X1  Freq -->  1
+NOR2X1  Freq -->  1
+AND2X2  Freq -->  2
+Total cells delay before Processing:  2.25913559984  ns
+Total cells delay After Processing:  2.2016746866925003  ns

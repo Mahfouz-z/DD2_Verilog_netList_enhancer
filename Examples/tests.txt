@@ -1,0 +1,47 @@
+testcase 1: 
+            lib: osu035.lib
+            netlist: cpu.rtlnopwr.v
+            technique: sizing up "1"
+            max fan-out: 4
+            expected results: total delay decreases but not very signficantly
+testcase 2:
+            lib: osu035.lib
+            netlist: cpu.rtlnopwr.v
+            technique: cloning "2"
+            expected results: total delay increases but no cells exceed the maximum specified fan-out
+testcase 3:
+            lib: osu035.lib
+            netlist: spi_ctl.rtlnopwr.v
+            technique: buffering "3"
+            expected results: the number of buffers increase after the buffering process, no cells violate
+                                the maximum fan-out
+testcase 4:
+            lib: osu035.lib
+            netlist: uart.rtlnopwr.v
+            technique: sizing up "1"
+            expected results: total delay decreases
+testcase 5:
+            lib: osu035.lib
+            netlist: output_TC4.v
+            technique: cloning "2"
+            expected results: the number of cells increase signficantly after cloning but no cells exceed 
+            the max fan-out 
+testcase 6:
+            lib: osu035.lib
+            netlist: test_case.v
+            technique: sizing up "1"
+            expected results: the main cell increases in size decreasing the total delay
+testcase 7:
+            lib: osu035.lib
+            netlist: test_case.v
+            technique: cloning "2"
+            expected results: the main cell is replicated so no cells violate the max fan out 
+testcase 8:
+            lib: osu035.lib
+            netlist: test_case.v
+            technique: buffering "1"
+            expected results: the main cell is connected to a network of buffers that in turn feed
+                                the other cells eliminating the fan-out violation, however the total delay
+                                increases due to the addition of new buffer cells
+
+            
